@@ -4,7 +4,7 @@
  * +----------------------------------------------------------------------+
  * | PEAR :: Mail :: Queue :: Container                                   |
  * +----------------------------------------------------------------------+
- * | Copyright (c) 1997-2004 The PHP Group                                |
+ * | Copyright (c) 1997-2008 The PHP Group                                |
  * +----------------------------------------------------------------------+
  * | All rights reserved.                                                 |
  * |                                                                      |
@@ -36,36 +36,31 @@
  * | POSSIBILITY OF SUCH DAMAGE.                                          |
  * +----------------------------------------------------------------------+
  *
- * PHP Version 4 and 5
+ * PHP Version 5
  *
  * @category Mail
- * @package  Mail_Queue
+ * @package  Mail_Queue2
  * @author   Radek Maciaszek <chief@php.net>
  * @author   Lorenzo Alberton <l dot alberton at quipo dot it>
  * @version  CVS: $Id$
  * @license  http://www.opensource.org/licenses/bsd-license.php The BSD License
- * @link     http://pear.php.net/package/Mail_Queue
+ * @link     http://pear.php.net/package/Mail_Queue2
  */
 
 /**
- * Mail_Queue_Body
- */
-require_once 'Mail/Queue/Body.php';
-
-/**
- * Mail_Queue_Container - base class for MTA queue.
+ * Mail_Queue2_Container - base class for MTA queue.
  * Define methods for all storage containers.
  *
  * @abstract
  * @category Mail
- * @package  Mail_Queue
+ * @package  Mail_Queue2
  * @author   Radek Maciaszek <chief@php.net>
  * @author   Lorenzo Alberton <l dot alberton at quipo dot it>
  * @license  http://www.opensource.org/licenses/bsd-license.php The BSD License
  * @version  Release: @package_version@
- * @link     http://pear.php.net/package/Mail_Queue
+ * @link     http://pear.php.net/package/Mail_Queue2
  */
-class Mail_Queue_Container
+abstract class Mail_Queue2_Container
 {
     // {{{ class vars
 
@@ -74,7 +69,7 @@ class Mail_Queue_Container
      *
      * @var array
      */
-    var $queue_data = array();
+    public $queue_data = array();
 
     /**
      * Key for current mail in queue
@@ -82,7 +77,7 @@ class Mail_Queue_Container
      * @var integer
      * @access private
      */
-    var $_current_item = 0;
+    protected $_current_item = 0;
 
     /**
      * Key for last mail in queue
@@ -90,24 +85,16 @@ class Mail_Queue_Container
      * @var integer
      * @access private
      */
-	var $_last_item = 0;
+	protected $_last_item = 0;
 
     /**
      * Options
      */
-    var $limit;
-    var $offset;
-    var $try;
-    var $force_preload;
-    var $buffer_size = 10; //number of mails in the queue
-
-    /**
-     * Pear error mode (see PEAR doc)
-     *
-     * @var int $pearErrorMode
-     * @access private
-     */
-    var $pearErrorMode = PEAR_ERROR_RETURN;
+    protected $limit;
+    protected $offset;
+    protected $retry;
+    protected $force_preload;
+    protected $buffer_size = 10; //number of mails in the queue
 
     // }}}
     // {{{ get()
@@ -115,29 +102,20 @@ class Mail_Queue_Container
     /**
      * Get next mail from queue. When exclude first time preload all queue
      *
-     * @return mixed  MailBody object on success else Mail_Queue_Error
+     * @return mixed  MailBody object on success else Mail_Queue2_Error
      * @access    public
      */
     function get()
     {
-        if (PEAR::isError($err = $this->preload())) {
-            return $err;
-        }
-        if ($err !== true) {
-            // limit met
-            return new Mail_Queue_Error(MAILQUEUE_ERROR_CANNOT_INITIALIZE,
-                $this->pearErrorMode, E_USER_ERROR, __FILE__, __LINE__,
-                'Cannot preload items: limit');
-        }
+        $err = $this->preload();
 
         if (empty($this->queue_data)) {
             return false;
         }
         if (!isset($this->queue_data[$this->_current_item])) {
             //unlikely...
-            return new Mail_Queue_Error(MAILQUEUE_ERROR_CANNOT_INITIALIZE,
-                $this->pearErrorMode, E_USER_ERROR, __FILE__, __LINE__,
-                'No item: '.$this->_current_item.' in queue!');
+            $msg = 'No item: '.$this->_current_item.' in queue!';
+            throw new Mail_Queue2_Exception($msg, Mail_Queue2::ERROR);
         }
 
         $object = $this->queue_data[$this->_current_item];
@@ -193,29 +171,53 @@ class Mail_Queue_Container
     }
 */
     // }}}
+
+
+    public function setLimit($limit)
+    {
+        $this->limit = $limit;
+        return $this;
+    }
+
+    public function setOffset($offset)
+    {
+        $this->offset = $offset;
+        return $this;
+    }
+
+    public function setRetry($retry)
+    {
+        $this->retry = $retry;
+        return $this;
+    }
+
     // {{{ setOption()
 
     /**
      * Set common option
      *
-     * Mail_Queue_Container::setOption()
+     * Mail_Queue2_Container::setOption()
      *
      * @param integer  $limit  Optional - Number of mails loaded to queue
      * @param integer  $offset Optional - You could also specify offset
-     * @param integer  $try  Optional - how many times should system try sent
-     *                       each mail
+     * @param integer  $retry  Optional - how many times should system try sent
+     *                         each mail
      * @param boolean  $force_preload  Optional - FIXME
      * @return void
-     *
-     * @access public
-     **/
-    function setOption($limit = MAILQUEUE_ALL, $offset = MAILQUEUE_START,
-                        $try = MAILQUEUE_TRY, $force_preload = false)
+     */
+    public function setOption(
+        $limit = Mail_Queue2::ALL,
+        $offset = Mail_Queue2::START,
+        $retry = Mail_Queue2::RETRY,
+        $force_preload = false
+    )
     {
-        $this->limit = $limit;
-        $this->offset = $offset;
-        $this->try = $try;
+        $this->limit         = $limit;
+        $this->offset        = $offset;
+        $this->retry         = $retry;
         $this->force_preload = $force_preload;
+
+        return $this;
     }
 
     // }}}
@@ -228,10 +230,7 @@ class Mail_Queue_Container
      * @return mixed  Integer or false if error.
      * @access public
      */
-    function countSend($mail)
-    {
-        return false;
-    }
+    abstract function countSend(Mail_Queue2_Body $mail);
 
     // }}}
     // {{{ setAsSent()
@@ -243,10 +242,14 @@ class Mail_Queue_Container
      * @return bool
      * @access public
      */
-    function setAsSent($mail)
-    {
-        return false;
-    }
+    abstract function setAsSent(Mail_Queue2_Body $mail);
+
+    /**
+     * Get the number of messages in the queue.
+     * @return int
+     * @access public
+     */
+    abstract function getQueueCount();
 
     // }}}
     // {{{ getMailById()
@@ -258,15 +261,7 @@ class Mail_Queue_Container
      * @return mixed  Mail object or false on error.
      * @access public
      */
-    function getMailById($id)
-    {
-        return false;
-    }
-
-    function getQueueCount()
-    {
-        return false;
-    }
+    abstract function getMailById($id);
 
     // }}}
     // {{{ deleteMail()
@@ -278,10 +273,15 @@ class Mail_Queue_Container
      * @return bool  True on success ale false.
      * @access public
      */
-    function deleteMail($id)
-    {
-        return false;
-    }
+    abstract function deleteMail($id);
+
+    // }}}
+    // {{{ setup()
+
+    /**
+     * @return bool
+     */
+    //abstract function setup();
 
     // }}}
     // {{{ preload()
@@ -290,37 +290,34 @@ class Mail_Queue_Container
      * Preload mail to queue.
      * The buffer size can be set in the options.
      *
-     * @return mixed True on success, false when the limit is met, else
-     *               Mail_Queue_Error object.
-     *
+     * @return mixed  True on success else Mail_Queue_Error object.
+     * @throws Mail_Queue2_Exception
      * @access private
      */
-    function preload()
+    protected function preload()
     {
         if (!empty($this->queue_data)) {
             return true;
         }
 
         if (!$this->limit) {
-            return false; //limit reached
+            return true;   //limit reached
         }
 
         $bkp_limit = $this->limit;
 
         //set buffer size
-        if ($bkp_limit == MAILQUEUE_ALL) {
+        if ($bkp_limit == Mail_Queue2::ALL) {
             $this->limit = $this->buffer_size;
         } else {
             $this->limit = min($this->buffer_size, $this->limit);
         }
 
-        if (Mail_Queue::isError($err = $this->_preload())) {
-            return $err;
-        }
+        $err = $this->_preload();
 
         //restore limit
-        if ($bkp_limit == MAILQUEUE_ALL) {
-            $this->limit = MAILQUEUE_ALL;
+        if ($bkp_limit == Mail_Queue2::ALL) {
+            $this->limit = Mail_Queue2::ALL;
         } else {
             $this->limit = $bkp_limit - count($this->queue_data);
         }
@@ -341,8 +338,9 @@ class Mail_Queue_Container
      * @param string $string
      * @return boolean
      * @access protected
+     * @todo   Instead of preg_match, we should unserialize and check if it ain't false.
      */
-    function _isSerialized($string)
+    protected function _isSerialized($string)
     {
         if (!is_string($string) || strlen($string) < 4) {
             return false;
@@ -365,4 +363,3 @@ class Mail_Queue_Container
 
     // }}}
 }
-?>

@@ -1,7 +1,7 @@
 <?php
 /**
  * +----------------------------------------------------------------------+
- * | PEAR :: Mail :: Queue                                                |
+ * | PEAR :: Mail :: Queue2                                               |
  * +----------------------------------------------------------------------+
  * | Copyright (c) 1997-2008 Radek Maciaszek, Lorenzo Alberton            |
  * +----------------------------------------------------------------------+
@@ -35,56 +35,34 @@
  * | POSSIBILITY OF SUCH DAMAGE.                                          |
  * +----------------------------------------------------------------------+
  *
- * PHP Version 4 and 5
+ * PHP Version 5
  *
  * @category Mail
- * @package  Mail_Queue
+ * @package  Mail_Queue2
  * @author   Radek Maciaszek <chief@php.net>
  * @author   Lorenzo Alberton <l.alberton@quipo.it>
  * @license  http://www.opensource.org/licenses/bsd-license.php The BSD License
  * @version  CVS: $Id$
- * @link     http://pear.php.net/package/Mail_Queue
+ * @link     http://pear.php.net/package/Mail_Queue2
  */
 
 /**
- * Mail_Queue_Error implements a class for reporting error
+ * Base class for exceptions in PEAR
+ */
+require_once 'PEAR/Exception.php';
+
+/**
+ * Mail_Queue2_Exception implements a class for reporting error
  * messages.
  *
  * @category Mail
- * @package  Mail_Queue
+ * @package  Mail_Queue2
  * @author   Radek Maciaszek <chief@php.net>
  * @author   Lorenzo Alberton <l.alberton@quipo.it>
  * @license  http://www.opensource.org/licenses/bsd-license.php The BSD License
  * @version  Release: @package_version@
- * @link     http://pear.php.net/package/Mail_Queue
+ * @link     http://pear.php.net/package/Mail_Queue2
  */
-class Mail_Queue_Error extends PEAR_Error
+class Mail_Queue2_Exception extends PEAR_Exception
 {
-    // {{{ constructor
-
-    /**
-     * Mail_Queue_Error constructor.
-     *
-     * @param mixed   $code      Mail_Queue error code, or string with error message.
-     * @param integer $mode      what 'error mode' to operate in
-     * @param integer $level     what error level to use for
-     *                           $mode & PEAR_ERROR_TRIGGER
-     * @param string  $debuginfo additional debug info
-     */
-    function Mail_Queue_Error($code = MAILQUEUE_ERROR, $mode = PEAR_ERROR_RETURN,
-              $level = E_USER_NOTICE,  $file=__FILE__, $line=__LINE__, $debuginfo='')
-    {
-
-        $debuginfo .= (empty($debuginfo) ? '' : ' - '). 'FILE: '.$file.', LINE: '.$line;
-        if (is_int($code)) {
-            $this->PEAR_Error('Mail Queue Error: ' . Mail_Queue::errorMessage($code),
-                              $code, $mode, $level, $debuginfo);
-        } else {
-            $this->PEAR_Error('Mail Queue Error: ' . $code, MAILQUEUE_ERROR, $mode,
-                              $level, $debuginfo);
-        }
-    }
-
-    // }}}
 }
-?>
